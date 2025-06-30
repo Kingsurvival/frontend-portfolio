@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CyberDefend Corporate Suite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      overflow: hidden;
+      animation: fadeIn 0.5s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px) }
+      to { opacity: 1; transform: translateY(0) }
+    }
+    .header {
+      background: linear-gradient(135deg, #0061ff, #60eaff);
+      padding: 24px;
+      color: #fff;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 1.7rem;
+      font-weight: 800;
+    }
+    .content {
+      padding: 24px;
+    }
+    h2, h3, h4 {
+      margin-bottom: 16px;
+      font-weight: 600;
+      color: #222;
+    }
+    input[type="text"], button {
+      width: 100%;
+      padding: 14px 20px;
+      margin-top: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    input[type="text"] {
+      background: #fafafa;
+    }
+    button {
+      background: #0061ff;
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0051d1;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0;
+    }
+    li {
+      background: #f9f9f9;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      transition: background 0.2s;
+    }
+    li.completed { background: #e1f5fe; }
+    input[type="checkbox"] { margin-right: 12px; width: 18px; height: 18px; }
+    .button-link {
+      background: transparent;
+      color: #0061ff;
+      border: none;
+      font-size: 0.95rem;
+      text-align: center;
+      padding: 16px 0;
+      cursor: pointer;
+    }
+    .button-link:hover { text-decoration: underline; }
+    .report-box {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="app"></div>
+
+  <script>
+    const app = document.getElementById('app');
+    let username = null;
+
+    function render(template) {
+      app.innerHTML = template;
+      bindActions();
+    }
+
+    function bindActions() {
+      document.querySelectorAll('[data-action]').forEach(btn => {
+        btn.onclick = window[btn.dataset.action];
+      });
+    }
+
+    function init() {
+      username = localStorage.getItem('currentUser');
+      if (!username) return loginView();
+      const phase = localStorage.getItem(`phase-${username}`) || 'checklist';
+      views[phase]();
+    }
+
+    const views = {
+      login: loginView,
+      checklist: checklistView,
+      reminder: reminderView,
+      done: congratsView,
+      report: reportView
+    };
+
+    function loginView() {
+      render(`
+        <div class="header">
+          <h1>CyberDefend Suite</h1>
+        </div>
+        <div class="content">
+          <h2>Sign In / Sign Up</h2>
+          <input type="text" id="username" placeholder="Your Name" />
+          <button data-action="login">Continue</button>
+        </div>
+      `);
+    }
+
+    function login() {
+      const name = document.getElementById('username').value.trim();
+      if (!name) return alert('Please enter your name.');
+      const users = JSON.parse(localStorage.getItem('users') || '{}');
+      if (users[name]) {
+        alert('You already have an account.');
+        return loginView();
+      }
+      users[name] = true;
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('currentUser', name);
+      localStorage.setItem(`phase-${name}`, 'checklist');
+      username = name;
+      checklistView();
+    }
+
+    function checklistView() {
+      render(`
+        <div class="header"><h1>Daily Checklist</h1></div>
+        <div class="content">
+          <h2>Welcome, ${username}</h2>
+          <ul id="tasks">
+            ${[
+              'Use strong, unique passwords',
+              'Enable 2FA across accounts',
+              'Avoid suspicious links',
+              'Backup data regularly',
+              'Review app permissions'
+            ].map(task => `
+              <li><label><input type="checkbox" /> ${task}</label></li>`).join('')}
+          </ul>
+          <button data-action="submitChecklist">Submit Daily</button>
+        </div>
+      `);
+    }
+
+    function submitChecklist() {
+      const items = Array.from(document.querySelectorAll('#tasks input')).map(el => el.checked);
+      if (items.includes(false)) return alert('Complete all tasks.');
+      localStorage.setItem(`checklist-${username}`, JSON.stringify(items));
+      localStorage.setItem(`phase-${username}`, 'reminder');
+      reminderView();
+    }
+
+    function reminderView() {
+      render(`
+        <div class="header"><h1>Weekly Reminder</h1></div>
+        <div class="content">
+          <h2>Almost There!</h2>
+          <p>✅ Check for software updates<br>✅ Run a malware scan<br>✅ Update your password manager<br>✅ Review app permissions</p>
+          <button data-action="submitReminder">Complete Weekly</button>
+        </div>
+      `);
+    }
+
+    function submitReminder() {
+      const tasks = [
+        'Check for software updates',
+        'Run a malware scan',
+        'Update your password manager',
+        'Review app permissions'
+      ];
+      localStorage.setItem(`reminder-${username}`, JSON.stringify(tasks));
+      localStorage.setItem(`phase-${username}`, 'done');
+      congratsView();
+    }
+
+    function congratsView() {
+      render(`
+        <div class="header"><h1>🎉 All Done!</h1></div>
+        <div class="content">
+          <h2>Congratulations, ${username}!</h2>
+          <p>Your Cyber Hygiene journey is complete.</p>
+          <button data-action="viewReport">View Your Summary</button>
+        </div>
+      `);
+    }
+
+    function viewReport() {
+      localStorage.setItem(`phase-${username}`, 'report');
+      reportView();
+    }
+
+    function reportView() {
+      const checklist = JSON.parse(localStorage.getItem(`checklist-${username}`) || '[]');
+      const reminder = JSON.parse(localStorage.getItem(`reminder-${username}`) || '[]');
+      render(`
+        <div class="header"><h1>Your Report</h1></div>
+        <div class="content">
+          <h2>${username}</h2>
+          <div class="report-box">
+            <h4>Daily Checklist Completed:</h4>
+            <ul>${checklist.map((c, i) => `<li>${c ? '✔️' : '❌'} Task ${i+1}</li>`).join('')}</ul>
+          </div>
+          <div class="report-box">
+            <h4>Weekly Tasks Completed:</h4>
+            <ul>${reminder.map(item => `<li>✔️ ${item}</li>`).join('')}</ul>
+          </div>
+          <button data-action="logout">Logout</button>
+        </div>
+      `);
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      init();
+    }
+
+    init();
+  </script>
+</body>
+</html>
